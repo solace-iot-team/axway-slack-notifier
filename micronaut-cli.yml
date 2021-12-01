@@ -1,0 +1,6 @@
+applicationType: messaging
+defaultPackage: com.solace.iotteam
+testFramework: junit
+sourceLanguage: kotlin
+buildTool: gradle_kotlin
+features: [ annotation-api, app-name, graalvm, gradle, junit, kotlin, kotlin-application, kotlin-extension-functions, log4j2, mqtt, readme, shade, yaml ]

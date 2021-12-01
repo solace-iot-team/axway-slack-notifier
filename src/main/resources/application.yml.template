@@ -1,0 +1,35 @@
+# vault namespace: solace/axway/awsdemo/notifier
+micronaut:
+  application:
+    name: notifier
+# remove property to disable
+# setting property to false is not sufficient to disable!
+mqtt-enabled: true
+# remove property to disable
+# setting property to false is not sufficient to disable!
+rest-enabled: true
+mqtt:
+  client:
+    server-uri: tcp://abc.messaging.solace.cloud:1883
+    client-id: abc
+    user-name: abc
+    password: abc
+    automatic-reconnect: true
+    clean-session: false
+topic:
+  subscribe: a/b/c
+  unsubscribe: a/b/c
+  echo: a/b/c
+  success: a/b/c
+  failure: a/b/c
+notifier:
+  slack:
+    url: https://hooks.slack.com
+    subscribe: /services/a/b/c
+    unsubscribe: /services/a/b/c
+monitor:
+  slack:
+    url: https://hooks.slack.com
+    success: /services/a/b/c
+    failure: /services/a/b/c
+

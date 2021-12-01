@@ -1,0 +1,16 @@
+mqtt:
+  client:
+    client-id: github-action-notifier
+topic:
+  subscribe: jt/axway/notifier/subscribe
+  unsubscribe: jt/axway/notifier/unsubscribe
+  echo: jt/axway/notifier/health
+  success: jt/axway/notifier/monitor/success
+  failure: jt/axway/notifier/monitor/failure
+notifier:
+  slack:
+    url: https://hooks.slack.com
+monitor:
+  slack:
+    url: https://hooks.slack.com
+

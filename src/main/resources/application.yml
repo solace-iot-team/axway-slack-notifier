@@ -1,0 +1,28 @@
+micronaut:
+  application:
+    name: notifier
+mqtt:
+  client:
+    server-uri:
+    client-id:
+    user-name:
+    password:
+    automatic-reconnect: true
+    clean-session: false
+topic:
+  subscribe: jt/axway/notifier/subscribe
+  unsubscribe: jt/axway/notifier/unsubscribe
+  echo: jt/axway/notifier/health
+  success: jt/axway/notifier/monitor/success
+  fault: jt/axway/notifier/monitor/failure
+notifier:
+  slack:
+    url: https://hooks.slack.com
+    subscribe:
+    unsubscribe:
+monitor:
+  slack:
+    url: https://hooks.slack.com
+    success:
+    fault:
+
