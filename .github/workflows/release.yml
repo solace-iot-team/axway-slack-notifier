@@ -1,0 +1,117 @@
+name: develop
+# Controls when the workflow will run
+on:
+
+  release:
+    types: [ created ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  VERSION: "0.0.0"
+  MQTT_CLIENT_PASSWORD: ${{ secrets.MQTT_CLIENT_PASSWORD }}
+  MQTT_CLIENT_SERVER_URI: ${{ secrets.MQTT_CLIENT_SERVERURI }}
+  MQTT_CLIENT_USER_NAME: ${{ secrets.MQTT_CLIENT_USERNAME }}
+  MONITOR_SLACK_SUCCESS: ${{ secrets.MONITOR_SLACK_SUCCESS }}
+  MONITOR_SLACK_FAULT: ${{ secrets.MONITOR_SLACK_FAULT }}
+  NOTIFIER_SLACK_SUBSCRIBE: ${{ secrets.NOTIFIER_SLACK_SUBSCRIBE }}
+  NOTIFIER_SLACK_UNSUBSCRIBE: ${{ secrets.NOTIFIER_SLACK_UNSUBSCRIBE }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check Auth
+        if: github.event_name == 'workflow_dispatch' && github.actor != 'ricardojosegomezulmke' && github.actor != '195858' && github.actor!= 'mynecker'
+        run: |
+          echo "not authorized"
+          echo '::set-output name=IS_AUTHORIZED::false'
+          id: auth
+      - name: Cancel Workflow
+        if: ${{ always() && steps.auth.outputs.IS_AUTHORIZED == 'false' }}
+        uses: andymckay/cancel-action@0.2
+
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Set version
+        run:   |
+          MYVERSION=$(<version.txt)
+          echo "VERSION=$MYVERSION">> $GITHUB_ENV
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
+      - run: npm install shelljs
+      - name: Check Docker Version Tag
+        uses: actions/github-script@v5
+        with:
+          script:  |
+             const s = require('shelljs');
+             const { VERSION, IMAGE_NAME } = process.env;
+             const dhid = "ghcr.io/"+IMAGE_NAME+":"+ VERSION
+             console.log('Looking up :'+dhid);
+             let code = s.exec('docker manifest inspect '+dhid).code;
+             if(code===0) {
+               console.log(`aborting - image already exists `+dhid);
+               process.exit(1);
+             } else {
+               console.log(`check ok - image can get published `+dhid);
+             }
+
+      - name: remove old version.txt.properties
+        run: rm -f src/main/resources/version.properties
+
+      - name: Write new version.txt.properties
+        run: echo "version:$VERSION">> src/main/resources/version.properties
+
+      - name: Build jar with Gradle
+        run: |
+          ./gradlew build dockerfile
+
+      - name: Dump files
+        run: ls -la build/docker
+
+      - name: Build container image
+        uses: docker/build-push-action@v2
+        with:
+          context: build/docker
+          push: false
+          tags: |
+            ghcr.io/${{env.IMAGE_NAME}}:latest
+            ghcr.io/${{env.IMAGE_NAME}}:${{env.VERSION}}
+
+      - name: Cleanup Gradle Cache
+        # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
+        # Restoring these files from a GitHub Actions cache might cause problems for future builds.
+        run: |
+          rm -f ~/.gradle/caches/modules-2/modules-2.lock
+          rm -f ~/.gradle/caches/modules-2/gc.properties
+
+
